@@ -15,6 +15,12 @@ from OnClientDisconnected import OnClientDisconnected
 
 class ClientsManager(ClientsManagerPetition, OnClientConnected, OnClientDisconnected):
 	def __init__(self, client_builder, port: int = 7000):
+		def connector_printer(msg: str):
+			print(msg)
+			with open("logs/clients_manager.log", "a") as log_file:
+				log_file.write(msg + "\n")
+
+		#self._connector = ClientsManagerConnector(self, printer = connector_printer)
 		self._connector = ClientsManagerConnector(self)
 		self._client_builder = client_builder
 		

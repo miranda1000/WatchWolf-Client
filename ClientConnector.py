@@ -22,7 +22,7 @@ class ClientConnector(OnMessage):
 	
 	def run(self):
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.socket.bind((socket.gethostname(), self._port))
+		self.socket.bind(("0.0.0.0", self._port))
 		self.socket.listen(5)
 		
 		# accept connections from outside
