@@ -7,4 +7,7 @@ A Python library to test Minecraft Plugins in the client side. For more informat
 - Build the image: `docker build --tag clients-manager .`
 
 ## Launch
-- Run the docker container: `sudo docker run -i --rm --name ClientsManager -p 7000-7199:7000-7199 --env MACHINE_IP=$(hostname -I | awk '{print $1}') --env PUBLIC_IP=$(curl ifconfig.me) clients-manager:latest`
+
+- Run the docker container: `docker run -i --rm --name ClientsManager -p 7000-7199:7000-7199 -v ./logs:/app/logs --env MACHINE_IP=$(hostname -I | awk '{print $1}') --env PUBLIC_IP=$(curl ifconfig.me) clients-manager:latest`
+
+Optional: add debug information `--env NODE_OPTIONS="--unhandled-rejections=strict --trace-warnings" --env PYTHONUNBUFFERED=1`

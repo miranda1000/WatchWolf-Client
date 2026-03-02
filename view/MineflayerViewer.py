@@ -19,7 +19,7 @@ class MineflayerViewer(threading.Thread,Viewer):
 		self._port = port
 		self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self._socket.bind(("127.0.0.1", port))
+		self._socket.bind(("0.0.0.0", port))
 		self._socket.listen(10)
 
 		self._images = ImageList()
