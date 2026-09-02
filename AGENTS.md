@@ -95,3 +95,12 @@ runs this container for you.
 - `LICENSE.md` holds mineflayer's own MIT text (`Copyright (c) 2015 Andrew Kelley`) rather than a
   WatchWolf-authored one. The other WatchWolf repos ship their own MIT `LICENSE`; worth raising if
   licensing ever matters.
+
+## Git conventions
+
+- **`dev` is the working branch.** Every WatchWolf repo integrates and releases from `dev`.
+  `master` (`main` in the WatchWolf standard repo) is downstream of it — never commit there
+  directly, and never open a PR against it.
+- **One branch per change, named for its kind:** `fix/<topic>` for defects, `feature/<topic>` for
+  new work. Branch from `dev`.
+- **Always open a PR into `dev`.** Do not push straight to `dev`, even for a one-line change.
