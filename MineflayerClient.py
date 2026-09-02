@@ -21,6 +21,7 @@ from time import sleep
 import datetime
 from typing import Dict
 import json
+import traceback
 
 from javascript import require, On, Once, console
 mineflayer = require('mineflayer', 'latest')
@@ -58,20 +59,25 @@ class MineflayerClient(MinecraftClient):
 			"port": port,
 			"username": username,
 
-			"checkTimeoutInterval": packet_timeout_sec * 1000
+			"auth": "offline",
+			"checkTimeoutInterval": packet_timeout_sec * 1000,
+			'hideErrors': False
 		})
         
 		self._cmd_return_lock = Lock()
 		self._cmd_return = []
-		
+
 		# add-ons
 		self._bot.loadPlugin(pathfinder)
 		
 		self._connector_thread = Thread(target = self._connector.run, args = ())
 		self._connector_thread.start()
 		
-		@On(self._bot, "login")
-		def login(_):
+		# ----------------
+		# -- Bot events --
+		# ----------------
+		@On(self._bot, "spawn")
+		def spawn(*args):
 			self._thread_lock.acquire()
 			if self._timedout != None:
 				# too late
@@ -80,11 +86,12 @@ class MineflayerClient(MinecraftClient):
 			self._timedout = False
 			self._thread_lock.release()
 			
-			print(self._username + " connected to the server (" + self.server + ")")
+			self._printer("[i] Client connected to the server")
 
 			# WatchWolf to Mineflayer initialization
+			self._printer(f"[v] Bot using Minecraft version {self._bot.version}")
 			self._watchwolf_item_to_mineflayer = MineflayerClient._get_watchwolf_to_mineflayer(self._bot.version)
-			
+		
 			# pathfinder initialization
 			defaultMove = Movements(self._bot)
 			defaultMove.canDig = False
@@ -96,8 +103,8 @@ class MineflayerClient(MinecraftClient):
 				self._client_connected_listener.client_connected(self)
 			
 		@On(self._bot, "end")
-		def end(_, reason):
-			self._printer("Bot ended: " + reason)
+		def end(*args):
+			self._printer("Bot ended")
 			self.close()
 		
 		@On(self._bot, "chat")
@@ -157,7 +164,7 @@ class MineflayerClient(MinecraftClient):
 			self._thread_lock.release()
 			
 			if timedout:
-				print(self._username + ", at " + self.server + " timedout")
+				self._printer("[e] Client timed out")
 	
 	@property
 	def timedout(self) -> bool:

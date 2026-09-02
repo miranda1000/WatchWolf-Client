@@ -75,16 +75,23 @@ runs this container for you.
   [mineflayer#2749](https://github.com/PrismarineJS/mineflayer/issues/2749). Logins time out
   after 120 s, and a timed-out client makes `start_client` return `""` — the Tester reads that as
   a failure.
-- **Recording**: `MineflayerClient.start_recording()` lazily creates a `MineflayerViewer`, which
-  runs prismarine-viewer headless and streams frames over a **loopback** socket into
+- **Recording is currently disabled at install time.** `requirements.py` has the
+  `prismarine-viewer` and `node-canvas-webgl` `require()` calls commented out, so a freshly built
+  image cannot record even though the Dockerfile still installs the X11/xvfb stack. Uncomment them
+  to re-enable it.
+- **How recording works** when enabled: `MineflayerClient.start_recording()` lazily creates a
+  `MineflayerViewer`, which runs prismarine-viewer headless and streams frames over a socket into
   `ImageList`, which encodes an mp4 with `imageio`/ffmpeg on `stop_recording`. Note the viewer
   binds `self._port + 1` where `self._port` is the *Minecraft server* port, not the client's
   assigned port — it does not line up with the port pairing the Clients Manager reserves.
 - **There are no tests, no linter config and no CI in this repo.** Quality is tracked externally
   by CodeFactor. Changes here are validated end-to-end from WatchWolf-Tester's
   `src/test/java/client/` and `generic/` suites.
-- Sockets bind to `socket.gethostname()`, not `0.0.0.0` — inside the container that resolves to
-  the container IP, which is why the port publishing above matters.
+- Sockets bind `0.0.0.0` (the ClientsManager, each client's connector, and the viewer). They used
+  to bind `socket.gethostname()`, which resolved to the container IP; if you are reading older
+  branches or issues, that is the difference.
+- The ClientsManager writes its log to `logs/`, which the container expects as a bind mount
+  (`-v ./logs:/app/logs`).
 - `LICENSE.md` holds mineflayer's own MIT text (`Copyright (c) 2015 Andrew Kelley`) rather than a
   WatchWolf-authored one. The other WatchWolf repos ship their own MIT `LICENSE`; worth raising if
   licensing ever matters.

@@ -36,18 +36,30 @@ for recordings — needs a GL context. Running `python3 ClientsManager.py` direc
 without that display and without the Node packages from `requirements.py` will not work; use the
 container.
 
+> **Note:** `prismarine-viewer` and `node-canvas-webgl` are currently commented out in
+> `requirements.py`, so a freshly built image cannot record. Uncomment them to re-enable
+> `start_recording` / `stop_recording`.
+
 ## Launch
 
 ```bash
-sudo docker run -i --rm --name ClientsManager -p 7000-7199:7000-7199 \
+docker run -i --rm --name ClientsManager -p 7000-7199:7000-7199 \
+    -v ./logs:/app/logs \
     --env MACHINE_IP=$(hostname -I | awk '{print $1}') \
     --env PUBLIC_IP=$(curl ifconfig.me) \
     clients-manager:latest
 ```
 
-The `7000-7199` range is what caps the number of concurrent bots. The
+The `7000-7199` range is what caps the number of concurrent bots. `./logs` receives the
+ClientsManager's log files (the folder is gitignored). The
 [WatchWolf setup script](https://github.com/watch-wolf/WatchWolf) builds and runs this container
 for you.
+
+To get extra diagnostics out of the Node bridge and mineflayer, add:
+
+```
+--env NODE_OPTIONS="--unhandled-rejections=strict --trace-warnings" --env PYTHONUNBUFFERED=1
+```
 
 ## Layout
 

@@ -1,5 +1,7 @@
 FROM nikolaik/python-nodejs
 ENV PYTHONUNBUFFERED=1
+#ENV NODE_OPTIONS="--unhandled-rejections=strict --trace-warnings"
+#ENV DEBUG="jspybridge"
 WORKDIR /app
 
 RUN apt-get update -y
@@ -16,4 +18,4 @@ COPY . .
 
 EXPOSE 7000-7199
 
-CMD xvfb-run --auto-servernum --server-num=1 --server-args='-ac -screen 0 1280x1024x24' python3 ClientsManager.py
+CMD xvfb-run --auto-servernum --server-num=1 --server-args='-ac -screen 0 1280x1024x24' stdbuf -oL -eL python3 -u ClientsManager.py >/dev/stdout 2>&1
