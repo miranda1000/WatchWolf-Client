@@ -5,13 +5,14 @@ import socket
 from threading import Thread
 from ClientsManagerPetition import ClientsManagerPetition
 from ConnectorHelper import ConnectorHelper
-import ipaddress
+from ReplyAddress import ReplyAddress
 
 class ClientsManagerConnector:
-	def __init__(self, petition_handler: ClientsManagerPetition, port: int = 7000, printer = lambda msg: print(msg)):
+	def __init__(self, petition_handler: ClientsManagerPetition, port: int = 7000, printer = lambda msg: print(msg), reply_address: ReplyAddress = None):
 		self._petition_handler = petition_handler
 		self._port = port
 		self._printer = printer
+		self._reply_address = reply_address if reply_address is not None else ReplyAddress(printer = printer)
 	
 	def run(self):
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,14 +25,12 @@ class ClientsManagerConnector:
 			(client_socket, address) = self.socket.accept() # TODO send address to the Client so it only replies to that one
 			
 			self._printer("[v] One client connected from " + address[0] + ":" + str(address[1]))
-			Thread(target = self._client_manager, args = (client_socket,ClientsManagerConnector._is_public_ip(address))).start()
+			# the requester proved which of our addresses works by reaching us on it; that is the one
+			# their bots' ports should be handed back on
+			reply_host = self._reply_address.for_connection(client_socket.getsockname(), address)
+			Thread(target = self._client_manager, args = (client_socket, reply_host)).start()
 	
-	@staticmethod
-	def _is_public_ip(address) -> bool:
-		ip = ipaddress.ip_address(address[0])
-		return not ip.is_private
-	
-	def _client_manager(self, socket, public_access: bool):
+	def _client_manager(self, socket, reply_host: str):
 		while True:
 			msg = None
 			try:
@@ -47,7 +46,7 @@ class ClientsManagerConnector:
 				ip = ConnectorHelper.readString(socket)
 				
 				self._printer("Starting client " + username + " at server " + ip + "...")
-				user_ip = self._petition_handler.start_client(username, ip, public_access)
+				user_ip = self._petition_handler.start_client(username, ip, reply_host)
 				if user_ip != "":
 					self._printer("Client started at " + user_ip)
 				
