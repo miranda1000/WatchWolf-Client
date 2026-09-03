@@ -15,6 +15,8 @@ the [`javascript`](https://pypi.org/project/javascript/) bridge. Shipped as a Do
 ClientsManager.py            entry point; port allocation, client registry
 ClientsManagerConnector.py   the :7000 socket loop (DST 0b010)
 ClientsManagerPetition.py    interface: start_client
+ReplyAddress.py              which of our addresses to hand a bot's port back on
+HostNetwork.py               whether our addresses are the host's, or a container's
 MinecraftClient.py           base class every client implements
 MineflayerClient.py          the real implementation (mineflayer bot + pathfinder)
 ClientConnector.py           per-client socket loop (DST 0b011)
@@ -52,9 +54,16 @@ runs this container for you.
 - **7000** — Clients Manager. `7000-7199` is published, so ~100 concurrent bots.
 - `ClientsManager.get_min_id()` hands out ports from **7001 in steps of two**, one pair per
   client: the odd port is the client's `ClientConnector` socket.
-- `start_client` returns `PUBLIC_IP:port` when the requester's address is public and
-  `MACHINE_IP:port` when it is private (`ClientsManagerConnector._is_public_ip`). Both env vars
-  are therefore **required**.
+- **`ReplyAddress` picks the host a bot's port is handed back on**, in this order: the address the
+  requester reached us on (only when `HostNetwork` says our addresses are the host's — see below),
+  then `PUBLIC_IP`/`MACHINE_IP` depending on whether the requester is public, then, as a last
+  resort, the address we were reached on anyway. Which source was used is logged on every
+  connection.
+- **The published-ports deployment (`-p 7000-7199:7000-7199`) never uses the first source.** In a
+  bridged container every connection arrives from the bridge gateway and our side of it is a
+  `172.x` address nobody outside can route to, so `HostNetwork.shares_host_network()` is false and
+  `MACHINE_IP` still decides. Run the container with `--network host` for the reached-address path
+  to apply. `MACHINE_IP` remains **required** for the default deployment.
 
 ## Conventions and gotchas
 
