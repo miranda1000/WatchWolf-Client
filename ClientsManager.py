@@ -66,10 +66,10 @@ class ClientsManager(ClientsManagerPetition, OnClientConnected, OnClientDisconne
 		
 		if client.timedout:
 			return "" # error
-		else:
-			# the connector already worked out which of our addresses the requester can reach
-			host = reply_host if reply_host else os.environ['MACHINE_IP']
-			return f"{host}:{port}"
+
+		# the connector already worked out which of our addresses the requester can reach
+		host = reply_host if reply_host else os.environ['MACHINE_IP']
+		return f"{host}:{port}"
 	
 	def get_min_id(self) -> int:
 		current_port = self._base_port

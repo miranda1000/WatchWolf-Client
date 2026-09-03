@@ -20,7 +20,7 @@ class ReplyAddress:
 	otherwise we fall back to `PUBLIC_IP`/`MACHINE_IP`, as before.
 	"""
 
-	def __init__(self, host_network: HostNetwork = None, printer = lambda msg: print(msg)):
+	def __init__(self, host_network: HostNetwork = None, printer = print):
 		self._host_network = host_network if host_network is not None else HostNetwork()
 		self._printer = printer
 
