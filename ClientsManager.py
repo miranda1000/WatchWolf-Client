@@ -44,7 +44,7 @@ class ClientsManager(ClientsManagerPetition, OnClientConnected, OnClientDisconne
 		del self._client_list[port]
 		self._thread_lock.release()
 	
-	def start_client(self, username: str, server_ip: str, public_access: bool = False) -> str:
+	def start_client(self, username: str, server_ip: str, reply_host: str = None) -> str:
 		ip = server_ip.split(":")
 		port = self.get_min_id()
 		sleep(8) # @ref https://github.com/PrismarineJS/mineflayer/issues/2749
@@ -66,11 +66,10 @@ class ClientsManager(ClientsManagerPetition, OnClientConnected, OnClientDisconne
 		
 		if client.timedout:
 			return "" # error
-		else:
-			if public_access:
-				return f"{os.environ['PUBLIC_IP']}:{port}"
-			else:
-				return f"{os.environ['MACHINE_IP']}:{port}"
+
+		# the connector already worked out which of our addresses the requester can reach
+		host = reply_host if reply_host else os.environ['MACHINE_IP']
+		return f"{host}:{port}"
 	
 	def get_min_id(self) -> int:
 		current_port = self._base_port
