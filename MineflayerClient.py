@@ -52,6 +52,7 @@ packet_timeout_sec = 120
 class MineflayerClient(MinecraftClient):
 	MAX_DISTANCE_MINE_BLOCKS = 4
 	TIMEOUT_BETWEEN_MESSAGESS = 400
+	CONNECTOR_SHUTDOWN_TIMEOUT_SEC = 2
     
 	def __init__(self, host: str, port: int, username: str, assigned_port: int, on_client_connected: OnClientConnected, on_client_disconnected: OnClientDisconnected):
 		super().__init__(host, port, username)
@@ -84,7 +85,7 @@ class MineflayerClient(MinecraftClient):
 		# add-ons
 		self._bot.loadPlugin(pathfinder)
 		
-		self._connector_thread = Thread(target = self._connector.run, args = ())
+		self._connector_thread = Thread(target = self._connector.run, args = (), daemon = True)
 		self._connector_thread.start()
 		
 		# ----------------
@@ -167,22 +168,38 @@ class MineflayerClient(MinecraftClient):
 		return None
 	
 	def close(self):
-		# a failed connection emits both "error" and "end", and a bot can also be closed after
-		# its login timeout, so guard against tearing the same client down more than once
-		self._thread_lock.acquire()
-		if self._closed:
-			self._thread_lock.release()
-			return
-		self._closed = True
-		self._thread_lock.release()
+		with self._thread_lock:
+			if self._closed:
+				return
+			self._closed = True
+		# The bridge dispatches callbacks for every bot on one thread. Never join a worker
+		# there: it may still be reading the Tester socket or waiting for another callback.
+		Thread(target = self._cleanup, daemon = True).start()
 
-		if self._viewer is not None:
-			self._viewer.close()
+	def _cleanup(self):
+		try:
+			self._connector.close()
+		except Exception as ex:
+			self._printer(f"[e] Could not close the client connector: {ex}")
 
-		self._connector.close()
-		self._connector_thread.join()
+		try:
+			self._connector_thread.join(self.CONNECTOR_SHUTDOWN_TIMEOUT_SEC)
+			if self._connector_thread.is_alive():
+				self._printer("[w] Client connector did not stop within the shutdown timeout")
+		except Exception as ex:
+			self._printer(f"[e] Could not wait for the client connector: {ex}")
 
-		self._client_disconnected_listener.client_disconnected(self) # TODO stop socket server and viewer
+		try:
+			if self._client_disconnected_listener is not None:
+				self._client_disconnected_listener.client_disconnected(self)
+		except Exception as ex:
+			self._printer(f"[e] Could not unregister the client: {ex}")
+
+		try:
+			if self._viewer is not None:
+				self._viewer.close()
+		except Exception as ex:
+			self._printer(f"[e] Could not close the client viewer: {ex}")
 	
 	def _login_timeout(self):
 		if self._client_connected_listener != None:
