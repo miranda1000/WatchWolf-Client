@@ -30,6 +30,19 @@ Movements = require('mineflayer-pathfinder').Movements
 GoalBlock = require('mineflayer-pathfinder').goals.GoalBlock
 Vec3 = require("vec3").Vec3
 
+# Every bot lives in the single Node.js process behind the `javascript` bridge, so a single
+# uncaught exception or unhandled promise rejection there (a mineflayer bot emits an 'error'
+# event on a failed login, which Node treats as fatal when nothing listens for it) tears the
+# whole bridge down and every other bot dies with it. Registering a global handler makes Node
+# log the failure and keep running instead; the per-bot `error` handler below still does the
+# real cleanup, this is the safety net for anything else that might escape.
+require("process").on("uncaughtException", lambda err: console.error(
+	f"[e] Uncaught exception in the JavaScript runtime (kept alive): " +
+	(err.stack if err is not None and err.stack is not None else str(err))))
+require("process").on("unhandledRejection", lambda reason: console.error(
+	f"[e] Unhandled promise rejection in the JavaScript runtime (kept alive): " +
+	(reason.stack if reason is not None and reason.stack is not None else str(reason))))
+
 # time to force the login
 login_timeout_sec = 120
 
@@ -49,6 +62,7 @@ class MineflayerClient(MinecraftClient):
 		self._client_disconnected_listener = on_client_disconnected
 		self._watchwolf_item_to_mineflayer = None
 		self._viewer = None
+		self._closed = False
 		
 		self._thread_lock = Lock()
 		self._timedout = None
@@ -76,6 +90,15 @@ class MineflayerClient(MinecraftClient):
 		# ----------------
 		# -- Bot events --
 		# ----------------
+		# Registered before "end" so it runs first when a connection failure emits both.
+		@On(self._bot, "error")
+		def error(*args):
+			detail = args[0] if args else None
+			detail = detail.stack if detail is not None and getattr(detail, "stack", None) is not None else detail
+			self._printer(f"[e] Bot error: {detail}")
+			traceback.print_exc()
+			self.close()
+
 		@On(self._bot, "spawn")
 		def spawn(*args):
 			self._thread_lock.acquire()
@@ -144,6 +167,15 @@ class MineflayerClient(MinecraftClient):
 		return None
 	
 	def close(self):
+		# a failed connection emits both "error" and "end", and a bot can also be closed after
+		# its login timeout, so guard against tearing the same client down more than once
+		self._thread_lock.acquire()
+		if self._closed:
+			self._thread_lock.release()
+			return
+		self._closed = True
+		self._thread_lock.release()
+
 		if self._viewer is not None:
 			self._viewer.close()
 
