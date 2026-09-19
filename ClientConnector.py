@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import socket
+from threading import Lock
 
 # view file
 import os
@@ -17,19 +18,44 @@ class ClientConnector(OnMessage):
 		self._petition_handler = petition_handler
 		self._port = port
 		self._printer = printer
+		self.socket = None
 		self._socket = None
 		self._closed = False
+		self._socket_lock = Lock()
 	
 	def run(self):
-		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.socket.bind(("0.0.0.0", self._port))
-		self.socket.listen(5)
-		
-		# accept connections from outside
-		(client_socket, address) = self.socket.accept() # TODO send address to the Client so it only replies to that one
-		
-		self._socket = client_socket
-		while not self._closed: # TODO sync
+		try:
+			with self._socket_lock:
+				if self._closed:
+					return
+				self.socket = listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+				listener.bind(("0.0.0.0", self._port))
+				listener.listen(5)
+				# Also bound the wait on platforms where shutdown cannot interrupt accept.
+				listener.settimeout(0.5)
+
+			while not self._closed:
+				try:
+					client_socket, address = listener.accept()
+				except socket.timeout:
+					continue
+				with self._socket_lock:
+					if self._closed:
+						self._close_socket(client_socket)
+						return
+					self._socket = client_socket
+				client_socket.settimeout(None)
+				self._serve(client_socket)
+				break
+		except OSError:
+			if not self._closed:
+				raise
+		finally:
+			self.close()
+
+	def _serve(self, client_socket):
+		while not self._closed:
 			try:
 				msg = ConnectorHelper.readShort(client_socket)
 			except Exception:
@@ -47,8 +73,8 @@ class ClientConnector(OnMessage):
 				if len(reply) > 0: self._printer(f"Result of '{command}' was '{reply}'")
 				
 				# response
-				ConnectorHelper.sendShort(self._socket, 0b000000000100_1_011)
-				ConnectorHelper.sendString(self._socket, reply)
+				ConnectorHelper.sendShort(client_socket, 0b000000000100_1_011)
+				ConnectorHelper.sendString(client_socket, reply)
 			elif msg == 0b000000000101_0_011:
 				pos = ConnectorHelper.readPosition(client_socket)
 				self._printer(f"Breaking block at {pos}...")
@@ -100,19 +126,45 @@ class ClientConnector(OnMessage):
 				os.remove(file_name)
 			else:
 				self._printer("Unknown request: " + str(msg))
-		self._socket = None # socket closed
 	
 	def close(self):
-		self._closed = True # TODO sync
-		self.socket.close()
+		with self._socket_lock:
+			if self._closed:
+				return
+			self._closed = True
+			listener, client_socket = self.socket, self._socket
+			self.socket = self._socket = None
+		# Closing the listener alone leaves the worker blocked reading the accepted socket.
+		self._close_socket(client_socket)
+		self._close_socket(listener)
+
+	@staticmethod
+	def _close_socket(sock):
+		if sock is None:
+			return
+		try:
+			sock.shutdown(socket.SHUT_RDWR)
+		except OSError:
+			pass # not connected, or already shut down
+		finally:
+			try:
+				sock.close()
+			except OSError:
+				pass
 
 	def message_received(self, username: str, msg: str):
-		if self._socket == None:
+		with self._socket_lock:
+			client_socket = self._socket
+		if client_socket is None:
 			return # no one to send
 		
-		ConnectorHelper.sendShort(self._socket, 0b000000000011_1_011)
-		ConnectorHelper.sendString(self._socket, username)
-		ConnectorHelper.sendString(self._socket, msg)
+		try:
+			ConnectorHelper.sendShort(client_socket, 0b000000000011_1_011)
+			ConnectorHelper.sendString(client_socket, username)
+			ConnectorHelper.sendString(client_socket, msg)
+		except OSError:
+			if not self._closed:
+				raise
 
 	@staticmethod
 	def _random_mp4(size: int = 15) -> str:
