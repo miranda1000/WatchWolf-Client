@@ -42,18 +42,23 @@ container.
 
 ## Launch
 
-```bash
-docker run -i --rm --name ClientsManager -p 7000-7199:7000-7199 \
-    -v ./logs:/app/logs \
-    --env MACHINE_IP=$(hostname -I | awk '{print $1}') \
-    --env PUBLIC_IP=$(curl ifconfig.me) \
-    clients-manager:latest
+```sh
+./run.sh                    # builds the image if missing, then starts ClientsManager
+./run.sh --force-recreate   # rebuilds the image first
 ```
 
-The `7000-7199` range is what caps the number of concurrent bots. `./logs` receives the
-ClientsManager's log files (the folder is gitignored). The
-[WatchWolf setup script](https://github.com/watch-wolf/WatchWolf) builds and runs this container
-for you.
+The launcher works from any directory and builds from the repository's Dockerfile.
+The host needs only Docker and standard POSIX shell utilities. Address discovery
+runs in a disposable `ubuntu:24.04` helper that installs `hostname`, `awk` and
+`curl`. Host networking makes it discover the host's addresses instead of a Docker
+bridge address. Tool/download failures stop startup; the helper is removed after
+use and ClientsManager continues running detached with host networking.
+
+Both addresses are discovered on every launch; host `MACHINE_IP` and `PUBLIC_IP`
+values are ignored. The helper requires network access to install its tools and
+look up the public address. The Clients Manager
+uses port 7000; bot connectors use ports in the 7000–7199 range. To retain logs when
+launching a container manually, mount `./logs:/app/logs`.
 
 To get extra diagnostics out of the Node bridge and mineflayer, add:
 
