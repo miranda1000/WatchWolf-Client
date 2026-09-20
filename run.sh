@@ -24,19 +24,12 @@ fi
 # Host networking makes hostname -I see the manager host's interfaces.
 echo "[v] Detecting IP addresses in a temporary Docker container..."
 addresses=$(docker run --rm -i --network host \
-    --env MACHINE_IP="${MACHINE_IP:-}" --env PUBLIC_IP="${PUBLIC_IP:-}" \
     --entrypoint /bin/bash ubuntu:24.04 -s <<'DETECT_IPS'
 set -euo pipefail
-if [ -z "$MACHINE_IP" ] || [ -z "$PUBLIC_IP" ]; then
-    apt-get update >&2
-    apt-get install -y --no-install-recommends ca-certificates curl hostname mawk >&2
-fi
-if [ -z "$MACHINE_IP" ]; then
-    MACHINE_IP=$(hostname -I | awk '{print $1}')
-fi
-if [ -z "$PUBLIC_IP" ]; then
-    PUBLIC_IP=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 https://ifconfig.me/ip)
-fi
+apt-get update >&2
+apt-get install -y --no-install-recommends ca-certificates curl hostname mawk >&2
+MACHINE_IP=$(hostname -I | awk '{print $1}')
+PUBLIC_IP=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 https://ifconfig.me/ip)
 if [ -z "$MACHINE_IP" ] || [ -z "$PUBLIC_IP" ]; then
     echo "[e] Could not determine MACHINE_IP and PUBLIC_IP." >&2
     exit 1

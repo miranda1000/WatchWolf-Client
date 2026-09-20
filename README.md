@@ -54,13 +54,9 @@ runs in a disposable `ubuntu:24.04` helper that installs `hostname`, `awk` and
 bridge address. Tool/download failures stop startup; the helper is removed after
 use and ClientsManager continues running detached with host networking.
 
-Set `MACHINE_IP` and `PUBLIC_IP` explicitly to skip installation and lookup:
-
-```sh
-MACHINE_IP=192.168.1.10 PUBLIC_IP=203.0.113.10 ./run.sh
-```
-
-An uncached helper image still requires an initial Docker pull. The Clients Manager
+Both addresses are discovered on every launch; host `MACHINE_IP` and `PUBLIC_IP`
+values are ignored. The helper requires network access to install its tools and
+look up the public address. The Clients Manager
 uses port 7000; bot connectors use ports in the 7000–7199 range. To retain logs when
 launching a container manually, mount `./logs:/app/logs`.
 
