@@ -124,6 +124,18 @@ class ClientConnector(OnMessage):
 				ConnectorHelper.sendShort(client_socket, 0b000000010000_1_011)
 				ConnectorHelper.sendFile(client_socket, file_name)
 				os.remove(file_name)
+			elif msg == 0b000000010001_0_011:
+				ConnectorHelper.sendShort(client_socket, 0b000000010001_1_011)
+				ConnectorHelper.sendPosition(client_socket, self._petition_handler.get_position())
+			elif msg == 0b000000010010_0_011:
+				ConnectorHelper.sendShort(client_socket, 0b000000010010_1_011)
+				ConnectorHelper.sendDouble(client_socket, self._petition_handler.get_pitch())
+			elif msg == 0b000000010011_0_011:
+				ConnectorHelper.sendShort(client_socket, 0b000000010011_1_011)
+				ConnectorHelper.sendDouble(client_socket, self._petition_handler.get_yaw())
+			elif msg == 0b000000010100_0_011:
+				ConnectorHelper.sendShort(client_socket, 0b000000010100_1_011)
+				ConnectorHelper.sendItems(client_socket, self._petition_handler.get_inventory())
 			else:
 				self._printer("Unknown request: " + str(msg))
 	

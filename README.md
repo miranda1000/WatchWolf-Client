@@ -4,7 +4,7 @@ The player half of [WatchWolf](https://watchwolf.dev/). Two modules ship from th
 
 - **Clients Manager** — listens on TCP **7000** and spawns bots on demand.
 - **Client** — a headless Minecraft player the Tester drives: chat, run commands, walk, mine,
-  place, hit, use, look around, and record video of what it sees.
+  place, hit, use, look around, inspect its state, and record video of what it sees.
 
 Written in **Python 3** on top of [mineflayer](https://github.com/PrismarineJS/mineflayer), via
 the [`javascript`](https://pypi.org/project/javascript/) Python↔Node bridge.
@@ -86,9 +86,19 @@ WatchWolf-Core and WatchWolf-Tester — never reorder or insert in the middle.
 
 ## Testing
 
-There are no tests in this repository. The modules are exercised end to end by
-[WatchWolf-Tester](https://github.com/miranda1000/WatchWolf-Tester)'s suite, which spawns real
-bots against real servers.
+Run the client connector's local socket tests in Docker with:
+
+```sh
+./ci/tests.sh
+```
+
+The runner uses a read-only checkout and disables the container network. To select matching test
+files, pass a `unittest` filename pattern, for example
+`./ci/tests.sh --tests 'test_client_*.py'`.
+
+The full modules are also exercised end to end by
+[WatchWolf-Tester](https://github.com/miranda1000/WatchWolf-Tester)'s integration suite, which
+spawns real bots against real servers.
 
 ## Related
 

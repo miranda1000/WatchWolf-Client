@@ -9,17 +9,17 @@ from OnClientDisconnected import OnClientDisconnected
 
 from Position import Position
 from items.Item import Item
-from items.ItemType import ITEMS_FILE_PATH
+from items.ItemType import ITEMS_FILE_PATH, ItemType
 from entities.Entity import Entity
 from view.Viewer import Viewer
 from view.MineflayerViewer import MineflayerViewer
 
 import socket
 from threading import Thread, Lock
-from math import ceil, radians
+from math import ceil, degrees, pi, radians
 from time import sleep
 import datetime
-from typing import Dict
+from typing import Dict, List
 import json
 import traceback
 
@@ -62,6 +62,7 @@ class MineflayerClient(MinecraftClient):
 		self._client_connected_listener = on_client_connected
 		self._client_disconnected_listener = on_client_disconnected
 		self._watchwolf_item_to_mineflayer = None
+		self._mineflayer_item_to_watchwolf = None
 		self._viewer = None
 		self._closed = False
 		
@@ -115,6 +116,10 @@ class MineflayerClient(MinecraftClient):
 			# WatchWolf to Mineflayer initialization
 			self._printer(f"[v] Bot using Minecraft version {self._bot.version}")
 			self._watchwolf_item_to_mineflayer = MineflayerClient._get_watchwolf_to_mineflayer(self._bot.version)
+			self._mineflayer_item_to_watchwolf = {
+				mineflayer_name: ItemType[watchwolf_name]
+				for watchwolf_name, mineflayer_name in self._watchwolf_item_to_mineflayer.items()
+			}
 		
 			# pathfinder initialization
 			defaultMove = Movements(self._bot)
@@ -358,6 +363,33 @@ class MineflayerClient(MinecraftClient):
 			sleep(2) # TODO is attack async?
 		else:
 			self._printer(f"Entity with uuid={uuid} not found nearby")
+
+	def get_position(self) -> Position:
+		position = self._bot.entity.position
+		dimension = str(self._bot.game.dimension).replace("minecraft:", "")
+		world = {
+			"overworld": "world",
+			"the_nether": "world_nether",
+			"the_end": "world_the_end"
+		}.get(dimension, dimension)
+		return Position(world, position.x, position.y, position.z)
+
+	def get_pitch(self) -> float:
+		return -degrees(self._bot.entity.pitch)
+
+	def get_yaw(self) -> float:
+		yaw = degrees(pi - self._bot.entity.yaw)
+		return (yaw + 180) % 360 - 180
+
+	def get_inventory(self) -> List[Item]:
+		inventory = []
+		for item in self._bot.inventory.items():
+			item_type = self._mineflayer_item_to_watchwolf.get(item.name)
+			if item_type is None:
+				self._printer(f"[w] Ignoring unknown inventory item '{item.name}'")
+				continue
+			inventory.append(Item(item_type, item.count))
+		return inventory
 	
 	def start_recording(self) -> int:
 		if self._viewer is None:
