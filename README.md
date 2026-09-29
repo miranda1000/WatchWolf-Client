@@ -86,7 +86,7 @@ WatchWolf-Core and WatchWolf-Tester — never reorder or insert in the middle.
 
 ## Testing
 
-Run the client connector's local socket tests in Docker with:
+Run the client connector's local socket and message callback tests in Docker with:
 
 ```sh
 ./ci/tests.sh
