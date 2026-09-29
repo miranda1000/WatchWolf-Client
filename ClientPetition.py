@@ -4,6 +4,7 @@
 from items.Item import Item
 from Position import Position
 from entities.Entity import Entity
+from typing import List
 
 class ClientPetition:
 	def send_message(self, msg: str):
@@ -37,6 +38,18 @@ class ClientPetition:
 		pass
 
 	def attack(self, uuid: str):
+		pass
+
+	def get_position(self) -> Position:
+		pass
+
+	def get_pitch(self) -> float:
+		pass
+
+	def get_yaw(self) -> float:
+		pass
+
+	def get_inventory(self) -> List[Item]:
 		pass
 
 	def start_recording(self) -> int:

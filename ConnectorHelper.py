@@ -8,7 +8,8 @@ from entities.EntityType import EntityType
 from entities.Entity import Entity
 
 import os
-from struct import unpack
+from struct import pack, unpack
+from typing import List
 
 class ConnectorHelper:
 	@staticmethod
@@ -47,7 +48,7 @@ class ConnectorHelper:
 	
 	@staticmethod
 	def sendDouble(socket, data: float):
-		pass
+		socket.sendall(pack('>d', data))
 	
 	@staticmethod
 	def readItem(socket) -> Item:
@@ -57,7 +58,14 @@ class ConnectorHelper:
 	
 	@staticmethod
 	def sendItem(socket, item: Item):
-		pass # TODO
+		ConnectorHelper.sendShort(socket, item.type.value)
+		socket.sendall(bytes([item.amount]))
+
+	@staticmethod
+	def sendItems(socket, items: List[Item]):
+		ConnectorHelper.sendShort(socket, len(items))
+		for item in items:
+			ConnectorHelper.sendItem(socket, item)
 	
 	@staticmethod
 	def readEntity(socket) -> Entity:

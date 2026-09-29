@@ -93,9 +93,10 @@ runs this container for you.
   `ImageList`, which encodes an mp4 with `imageio`/ffmpeg on `stop_recording`. Note the viewer
   binds `self._port + 1` where `self._port` is the *Minecraft server* port, not the client's
   assigned port — it does not line up with the port pairing the Clients Manager reserves.
-- **There are no tests, no linter config and no CI in this repo.** Quality is tracked externally
-  by CodeFactor. Changes here are validated end-to-end from WatchWolf-Tester's
-  `src/test/java/client/` and `generic/` suites.
+- **The focused unit suite is Dockerized.** Run `./ci/tests.sh`; it currently covers the client
+  connector's local petitions without requiring Mineflayer, Node packages, or a Minecraft server.
+  Full behavior is validated end-to-end from WatchWolf-Tester's `src/test/java/client/` and
+  `generic/` suites.
 - Sockets bind `0.0.0.0` (the ClientsManager, each client's connector, and the viewer). They used
   to bind `socket.gethostname()`, which resolved to the container IP; if you are reading older
   branches or issues, that is the difference.
