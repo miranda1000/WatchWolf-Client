@@ -136,12 +136,13 @@ class MineflayerClient(MinecraftClient):
 			self._printer("Bot ended")
 			self.close()
 		
+		# The bridge passes the event arguments directly; there is no leading emitter argument.
 		@On(self._bot, "chat")
-		def handle(_, username, message, *args):
+		def handle(username, message, *args):
 			self._connector.message_received(username, message)
             
 		@On(self._bot, "message")
-		def message(_, message, position, *args):
+		def message(message, position, *args):
 			if position != "system": return # we expect returns to commands; ignore other things
 			self._cmd_return_lock.acquire()
 			self._cmd_return.append(message.toString())
